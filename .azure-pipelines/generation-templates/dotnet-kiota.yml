@@ -17,3 +17,4 @@ steps:
 - pwsh: 'dotnet build --configuration $(buildConfiguration) -f netstandard2.0 --no-restore'
   displayName: Build dll for ${{ parameters.repoName }}
   workingDirectory: $(Build.SourcesDirectory)/${{ parameters.repoName }}/src/Microsoft.Graph/
+
