@@ -40,6 +40,18 @@ parameters:
   type: string
   default: ''
 
+- name: commitMessagePrefix
+  type: string
+  default: ''
+
+- name: exportDom
+  type: boolean
+  default: true
+
+- name: pathExclusionArguments
+  type: string
+  default: "-e '/copilot' -e '/copilot/**'"
+
 steps:
 - template: set-up-for-generation-kiota.yml
   parameters:
@@ -74,8 +86,10 @@ steps:
     BranchName: ${{ parameters.branchName }}
   workingDirectory: ${{ parameters.repoName }}
 
-- bash: '$(kiotaDirectory)/kiota generate --openapi $(Build.SourcesDirectory)/msgraph-metadata/${{ parameters.cleanMetadataFolder }}/openapi.yaml --language ${{ parameters.language }} -o $(kiotaDirectory)/output -n ${{ parameters.targetNamespace }} -c ${{ parameters.targetClassName }} ${{ parameters.customArguments }}'
+- bash: '$(kiotaDirectory)/kiota generate --openapi $(Build.SourcesDirectory)/msgraph-metadata/${{ parameters.cleanMetadataFolder }}/openapi.yaml --language ${{ parameters.language }} -o $(kiotaDirectory)/output -n ${{ parameters.targetNamespace }} -c ${{ parameters.targetClassName }} ${{ parameters.customArguments }} ${{ parameters.pathExclusionArguments }}'
   displayName: 'Run Kiota for ${{ parameters.language }} ${{ parameters.version }}'
+  env:
+    KIOTA_GENERATION:EXPORTPUBLICAPI: ${{ parameters.exportDom }}
 
 - ${{ parameters.languageSpecificSteps }}
 
@@ -85,6 +99,7 @@ steps:
     BranchName: ${{ parameters.branchName }}
     PublishChanges: $(publishChanges)
     OverrideSkipCI: $(overrideSkipCI)
+    CommitMessagePrefix: ${{ parameters.commitMessagePrefix }}
   workingDirectory: ${{ parameters.repoName }}
 
 - pwsh: '$(scriptsDirectory)/create-pull-request.ps1'

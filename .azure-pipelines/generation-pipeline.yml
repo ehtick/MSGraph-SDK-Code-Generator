@@ -15,108 +15,113 @@ resources:
  repositories:
    - repository: msgraph-sdk-dotnet
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-dotnet
-     ref: master
+     ref: main
    - repository: msgraph-beta-sdk-dotnet
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-dotnet
-     ref: master
+     ref: main
    - repository: msgraph-sdk-php
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-php
-     ref: dev
+     ref: main
    - repository: msgraph-beta-sdk-php
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-php
      ref: main
    - repository: msgraph-typescript-typings
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-typescript-typings
      ref: main
    - repository: msgraph-beta-typescript-typings
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-typescript-typings
      ref: main
    - repository: msgraph-sdk-objc-models
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-objc-models
      ref: dev
    - repository: msgraph-sdk-java
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-java
-     ref: dev
+     ref: main
    - repository: msgraph-beta-sdk-java
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-java
-     ref: dev
+     ref: main
    - repository: msgraph-sdk-go
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-go
      ref: main
    - repository: msgraph-beta-sdk-go
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-go
      ref: main
    - repository: msgraph-sdk-ruby
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-ruby
      ref: main
    - repository: msgraph-beta-sdk-ruby
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-ruby
      ref: main
    - repository: msgraph-sdk-typescript
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-typescript
-     ref: dev
+     ref: main
+   - repository: msgraph-beta-sdk-typescript
+     type: github
+     endpoint: microsoftgraph (22)
+     name: microsoftgraph/msgraph-beta-sdk-typescript
+     ref: main
    - repository: msgraph-sdk-python
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-sdk-python
      ref: main
    - repository: msgraph-beta-sdk-python
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-sdk-python
      ref: main
    - repository: msgraph-cli
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-cli
      ref: main
    - repository: msgraph-beta-cli
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-beta-cli
      ref: main
    - repository: msgraph-metadata
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/msgraph-metadata
    - repository: microsoft-graph-docs
      type: github
-     endpoint: microsoftgraph
+     endpoint: microsoftgraph (22)
      name: microsoftgraph/microsoft-graph-docs
    - repository: kiota
      type: github
      endpoint: microsoftkiota
      name: microsoft/kiota
 
-pool: 1es-ubuntu-latest
+pool: 1es-ubuntu-latest-m
 
 parameters:
   - name: v1BranchPrefix
@@ -130,6 +135,11 @@ parameters:
   - name: skipMetadataCaptureAndClean
     default: false
     displayName: Skip metadata capture and clean
+    type: boolean
+
+  - name: skipOpenApiCaptureAndClean
+    default: false
+    displayName: Skip OpenAPI capture and clean
     type: boolean
 
   - name: publishChanges
@@ -158,8 +168,8 @@ variables:
   cleanMetadataFolderV1: 'clean_v10_metadata'
   cleanOpenAPIFolderBeta: 'clean_beta_openapi'
   cleanOpenAPIFolderV1: 'clean_v10_openapi'
-  rawMetadataFileBeta: 'https://graph.microsoft.com/beta/$metadata'
-  rawMetadataFileV1: 'https://graph.microsoft.com/v1.0/$metadata' # We want to run against the metadata we have captured.
+  rawMetadataFileBeta: '$(Build.SourcesDirectory)/msgraph-metadata/schemas/beta-Prod.csdl'
+  rawMetadataFileV1: '$(Build.SourcesDirectory)/msgraph-metadata/schemas/v1.0-Prod.csdl'
   typewriterDirectory: '$(Build.SourcesDirectory)/typewriter'
   kiotaDirectory: '$(Build.SourcesDirectory)/kiota'
   typewriterExecutable: '$(typewriterDirectory)/Typewriter'
@@ -174,6 +184,7 @@ variables:
   publishChanges: ${{ parameters.publishChanges }}
   overrideSkipCI: ${{ parameters.overrideSkipCI }}
   skipMetadataCaptureAndClean: ${{ parameters.skipMetadataCaptureAndClean }}
+  skipOpenApiCaptureAndClean: ${{ parameters.skipOpenApiCaptureAndClean }}
   phpVersion: 7.2
 
 # This stage is the core dependency for all other stages.
@@ -233,7 +244,7 @@ stages:
 
 - stage: stage_v1_openapi
   dependsOn: stage_v1_metadata
-  condition: in(dependencies.stage_v1_metadata.result, 'Succeeded', 'Skipped')
+  condition: and(in(dependencies.stage_v1_metadata.result, 'Succeeded', 'Skipped'), eq( ${{ parameters.skipOpenApiCaptureAndClean }}, false))
   jobs:
   - template: generation-templates/capture-openapi.yml
     parameters:
@@ -243,7 +254,7 @@ stages:
 
 - stage: stage_beta_openapi
   dependsOn: stage_beta_metadata
-  condition: in(dependencies.stage_beta_metadata.result, 'Succeeded', 'Skipped')
+  condition: and(in(dependencies.stage_beta_metadata.result, 'Succeeded', 'Skipped'), eq( ${{ parameters.skipOpenApiCaptureAndClean }}, false))
   jobs:
   - template: generation-templates/capture-openapi.yml
     parameters:
@@ -259,7 +270,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: csharp_v1_kiota
@@ -269,10 +280,11 @@ stages:
         language: 'csharp'
         version: ''
         repoName: 'msgraph-sdk-dotnet'
-        baseBranchName : 'dev'
+        baseBranchName : 'main'
         branchName: 'kiota/$(v1Branch)'
         targetClassName: "BaseGraphServiceClient"
         targetNamespace: "Microsoft.Graph"
+        commitMessagePrefix: "feat(generation): update request builders and models"
         customArguments: "-b" # Enable the backing store
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
         languageSpecificSteps:
@@ -288,7 +300,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: csharp_beta_kiota
@@ -298,10 +310,11 @@ stages:
         language: 'csharp'
         version: 'beta'
         repoName: 'msgraph-beta-sdk-dotnet'
-        baseBranchName : 'master'
+        baseBranchName : 'main'
         branchName: 'kiota/$(betaBranch)'
         targetClassName: "BaseGraphServiceClient"
         targetNamespace: "Microsoft.Graph.Beta"
+        commitMessagePrefix: "feat(generation): update request builders and models"
         customArguments: "-b" # Enable the backing store
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
         languageSpecificSteps:
@@ -317,7 +330,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: go_v1
@@ -331,6 +344,7 @@ stages:
         targetClassName: "GraphBaseServiceClient"
         targetNamespace: "github.com/microsoftgraph/msgraph-sdk-go/"
         customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and Enable the backing store
+        commitMessagePrefix: "feat(generation): update request builders and models"
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
         languageSpecificSteps:
         - template: generation-templates/go.yml
@@ -345,7 +359,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: go_beta
@@ -359,6 +373,7 @@ stages:
         targetClassName: "GraphBaseServiceClient"
         targetNamespace: "github.com/microsoftgraph/msgraph-beta-sdk-go/"
         customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and Enable the backing store
+        commitMessagePrefix: "feat(generation): update request builders and models"
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
         languageSpecificSteps:
         - template: generation-templates/go.yml
@@ -373,7 +388,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: ruby_v1
@@ -387,6 +402,7 @@ stages:
         targetClassName: "GraphBaseServiceClient"
         targetNamespace: "MicrosoftGraph"
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
+        customArguments: "-e '/me' -e '/me/**'" # Exclude me
         languageSpecificSteps:
         - template: generation-templates/ruby.yml
           parameters:
@@ -401,7 +417,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: ruby_beta
@@ -415,64 +431,12 @@ stages:
         targetClassName: "GraphBaseServiceClient"
         targetNamespace: "MicrosoftGraphBeta"
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
+        customArguments: "-e '/me' -e '/me/**'" # Exclude me
         languageSpecificSteps:
         - template: generation-templates/ruby.yml
           parameters:
             repoName: msgraph-beta-sdk-ruby
             barrelFileName: microsoft_graph_beta.rb
-
-
-- stage: stage_java_v1
-  dependsOn:
-  - stage_build_and_publish_typewriter
-  - stage_v1_metadata
-  condition: |
-    and
-    (
-      eq(dependencies.stage_build_and_publish_typewriter.result, 'Succeeded'),
-      in(dependencies.stage_v1_metadata.result, 'Succeeded', 'Skipped')
-    )
-  jobs:
-  - job: java_v1
-    steps:
-    - template: generation-templates/language-generation.yml
-      parameters:
-        language: 'Java'
-        version: ''
-        repoName: 'msgraph-sdk-java'
-        branchName: $(v1Branch)
-        cleanMetadataFile: $(cleanMetadataFileV1)
-        cleanMetadataFolder: $(cleanMetadataFolderV1)
-        languageSpecificSteps:
-        - template: generation-templates/java.yml
-          parameters:
-            repoName: msgraph-sdk-java
-
-- stage: stage_java_beta
-  dependsOn:
-  - stage_build_and_publish_typewriter
-  - stage_beta_metadata
-  condition: |
-    and
-    (
-      eq(dependencies.stage_build_and_publish_typewriter.result, 'Succeeded'),
-      in(dependencies.stage_beta_metadata.result, 'Succeeded', 'Skipped')
-    )
-  jobs:
-  - job: java_beta
-    steps:
-    - template: generation-templates/language-generation.yml
-      parameters:
-        language: 'Java'
-        version: 'Beta'
-        repoName: 'msgraph-beta-sdk-java'
-        branchName: $(betaBranch)
-        cleanMetadataFile: $(cleanMetadataFileBeta)
-        cleanMetadataFolder: $(cleanMetadataFolderBeta)
-        languageSpecificSteps:
-        - template: generation-templates/java.yml
-          parameters:
-            repoName: msgraph-beta-sdk-java
 
 - stage: stage_java_v1_kiota
   dependsOn:
@@ -482,7 +446,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: java_v1_kiota
@@ -492,16 +456,18 @@ stages:
         language: 'java'
         version: ''
         repoName: 'msgraph-sdk-java'
-        baseBranchName: 'feature/6.0'
-        branchName: 'kiota/$(v1Branch)'
+        baseBranchName: 'main'
+        branchName: '$(v1Branch)'
         targetClassName: "BaseGraphServiceClient"
         targetNamespace: "com.Microsoft.Graph"
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
-        customArguments: "-e '/me' -e '/me/**'" # Exclude /me
+        customArguments: "-b -e '/me' -e '/me/**'" # Exclude /me/** and enable backing store
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/java-kiota.yml
           parameters:
             repoName: msgraph-sdk-java
+            namespacePath: com/microsoft/graph
 
 - stage: stage_java_beta_kiota
   dependsOn:
@@ -511,7 +477,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: java_beta_kiota
@@ -521,71 +487,19 @@ stages:
         language: 'java'
         version: 'beta'
         repoName: 'msgraph-beta-sdk-java'
-        baseBranchName: 'feature/6.0'
-        branchName: 'kiota/$(betaBranch)'
+        baseBranchName: 'main'
+        branchName: '$(betaBranch)'
         targetClassName: "BaseGraphServiceClient"
-        targetNamespace: "com.Microsoft.Graph"
+        targetNamespace: "com.Microsoft.Graph.Beta"
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
-        customArguments: "-e '/me' -e '/me/**'" # Exclude /me
+        customArguments: "-b -e '/me' -e '/me/**'" # Exclude /me/** and enable backing store
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/java-kiota.yml
           parameters:
             repoName: msgraph-beta-sdk-java
+            namespacePath: com/microsoft/graph/beta
 
-- stage: stage_php_v1
-  dependsOn:
-  - stage_build_and_publish_typewriter
-  - stage_v1_metadata
-  condition: |
-    and
-    (
-      eq(dependencies.stage_build_and_publish_typewriter.result, 'Succeeded'),
-      in(dependencies.stage_v1_metadata.result, 'Succeeded', 'Skipped')
-    )
-  jobs:
-  - job: php_v1
-    steps:
-    - template: generation-templates/language-generation.yml
-      parameters:
-        language: 'PHP'
-        version: ''
-        repoName: 'msgraph-sdk-php'
-        branchName: $(v1Branch)
-        cleanMetadataFile: $(cleanMetadataFileV1)
-        cleanMetadataFolder: $(cleanMetadataFolderV1)
-        languageSpecificSteps:
-        - template: generation-templates/php-v1.yml
-          parameters:
-             repoName: 'msgraph-sdk-php'
-
-- stage: stage_php_beta
-  dependsOn:
-  - stage_build_and_publish_typewriter
-  - stage_beta_metadata
-  condition: |
-    and
-    (
-      eq(dependencies.stage_build_and_publish_typewriter.result, 'Succeeded'),
-      in(dependencies.stage_beta_metadata.result, 'Succeeded', 'Skipped')
-    )
-  jobs:
-  - job: php_beta
-    steps:
-    - template: generation-templates/language-generation.yml
-      parameters:
-        language: 'PHP'
-        version: 'beta'
-        repoName: 'msgraph-sdk-php'
-        branchName: $(betaBranch)
-        cleanMetadataFile: $(cleanMetadataFileBeta)
-        cleanMetadataFolder: $(cleanMetadataFolderBeta)
-        languageSpecificSteps:
-        - template: generation-templates/php-beta.yml
-          parameters:
-             phpBetaGenerationDirectory: $(Build.SourcesDirectory)/msgraph-sdk-php/src/Beta/
-             repoName: 'msgraph-sdk-php'
-             migration: false
-             pathToCopy: '/com/Beta/*'
 
 - stage: stage_php_beta_kiota
   dependsOn:
@@ -595,7 +509,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
     - job: php_beta_kiota
@@ -608,13 +522,15 @@ stages:
             branchName: 'kiota/$(betaBranch)'
             targetClassName: "BaseGraphClient"
             targetNamespace: 'Microsoft\\Graph\\Beta\\Generated'
-            baseBranchName: 'dev'
+            baseBranchName: 'main'
+            commitMessagePrefix: "feat(generation): update request builders and models"
             cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
             languageSpecificSteps:
               - template: generation-templates/php-kiota.yml
                 parameters:
                   repoName: msgraph-beta-sdk-php
             customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and Enable the backing store
+
 - stage: stage_php_v1_kiota
   dependsOn:
     - stage_build_and_publish_kiota
@@ -623,7 +539,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
     - job: php_v1_kiota
@@ -636,13 +552,15 @@ stages:
             branchName: 'kiota/$(v1Branch)'
             targetClassName: "BaseGraphClient"
             targetNamespace: 'Microsoft\\Graph\\Generated'
-            baseBranchName: 'feat/kiota-preview'
+            baseBranchName: 'main'
+            commitMessagePrefix: "feat(generation): update request builders and models"
             cleanMetadataFolder: $(cleanOpenAPIFolderV1)
             languageSpecificSteps:
               - template: generation-templates/php-kiota.yml
                 parameters:
                   repoName: msgraph-sdk-php
             customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and Enable the backing store
+
 - stage: stage_typescript_v1
   dependsOn:
   - stage_build_and_publish_typewriter
@@ -703,7 +621,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: typescript_sdk_v1
@@ -713,14 +631,49 @@ stages:
         language: 'typescript'
         version: ''
         repoName: 'msgraph-sdk-typescript'
+        baseBranchName : 'main'
         branchName: $(v1Branch)
+        commitMessagePrefix: "feat(generation): update request builders and models"
         targetClassName: "GraphBaseServiceClient"
         targetNamespace: "github.com/microsoftgraph/msgraph-sdk-typescript/"
+        customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and enable backing store
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
         languageSpecificSteps:
         - template: generation-templates/typescript-sdk.yml
           parameters:
             repoName: msgraph-sdk-typescript
+            packageName: '@microsoft/msgraph-sdk'
+
+- stage: stage_typescript_sdk_beta
+  dependsOn:
+  - stage_build_and_publish_kiota
+  - stage_beta_openapi
+  condition: |
+    and
+    (
+      eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
+    )
+  jobs:
+  - job: typescript_sdk_beta
+    steps:
+    - template: generation-templates/language-generation-kiota.yml
+      parameters:
+        language: 'typescript'
+        version: 'beta'
+        repoName: 'msgraph-beta-sdk-typescript'
+        baseBranchName : 'main'
+        branchName: $(betaBranch)
+        commitMessagePrefix: "feat(generation): update request builders and models"
+        targetClassName: "GraphBetaBaseServiceClient"
+        targetNamespace: "github.com/microsoftgraph/msgraph-sdk-typescript/"
+        customArguments: "-b -e '/me' -e '/me/**'" # Exclude me and enable backing store
+        cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
+        languageSpecificSteps:
+        - template: generation-templates/typescript-sdk.yml
+          parameters:
+            repoName: msgraph-beta-sdk-typescript
+            packageName: '@microsoft/msgraph-beta-sdk'
 
 - stage: stage_python_v1
   dependsOn:
@@ -730,7 +683,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: python_v1
@@ -745,10 +698,12 @@ stages:
         targetNamespace: "msgraph.generated"
         customArguments: "-b -e '/me' -e '/me/**'" # Enable backing store, Exclude me
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/python.yml
           parameters:
             repoName: msgraph-sdk-python
+            baseDirectory: msgraph
 
 - stage: stage_python_beta
   dependsOn:
@@ -758,7 +713,7 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: python_beta
@@ -770,13 +725,15 @@ stages:
         repoName: 'msgraph-beta-sdk-python'
         branchName: $(betaBranch)
         targetClassName: "BaseGraphServiceClient"
-        targetNamespace: "msgraph.generated"
+        targetNamespace: "msgraph_beta.generated"
         customArguments: "-b -e '/me' -e '/me/**'" # Enable backing store, Exclude me
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/python.yml
           parameters:
             repoName: msgraph-beta-sdk-python
+            baseDirectory: msgraph_beta
 
 - stage: stage_cli_v1_kiota
   dependsOn:
@@ -786,10 +743,14 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_v1_openapi.result, 'Succeeded')
+      in(dependencies.stage_v1_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: cli_v1_kiota
+    timeoutInMinutes: 60
+    pool:
+      name: 1es-ubuntu-latest-ado-cli-mem
+      os: linux
     steps:
     - template: generation-templates/language-generation-kiota.yml
       parameters:
@@ -802,6 +763,7 @@ stages:
         targetNamespace: "ApiSdk"
         customArguments: "-e '/me' -e '/me/**'"
         cleanMetadataFolder: $(cleanOpenAPIFolderV1)
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/cli-kiota.yml
           parameters:
@@ -816,22 +778,27 @@ stages:
     and
     (
       eq(dependencies.stage_build_and_publish_kiota.result, 'Succeeded'),
-      eq(dependencies.stage_beta_openapi.result, 'Succeeded')
+      in(dependencies.stage_beta_openapi.result, 'Succeeded', 'Skipped')
     )
   jobs:
   - job: cli_beta_kiota
+    timeoutInMinutes: 60
+    pool:
+      name: 1es-ubuntu-latest-ado-cli-mem
+      os: linux
     steps:
     - template: generation-templates/language-generation-kiota.yml
       parameters:
         language: 'cli'
         version: ''
-        repoName: 'msgraph-cli'
+        repoName: 'msgraph-beta-cli'
         baseBranchName : 'main'
         branchName: 'kiota/$(betaBranch)'
         targetClassName: "GraphClient"
         targetNamespace: "ApiSdk"
         customArguments: "-e '/me' -e '/me/**'"
         cleanMetadataFolder: $(cleanOpenAPIFolderBeta)
+        commitMessagePrefix: "feat(generation): update request builders and models"
         languageSpecificSteps:
         - template: generation-templates/cli-kiota.yml
           parameters:
